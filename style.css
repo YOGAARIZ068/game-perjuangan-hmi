@@ -419,3 +419,44 @@ button {
         display: none;
     }
 }
+
+/* PAKSA LAYAR FULLSCREEN & LANDSCAPE DI HP */
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #0f172a;
+}
+
+#game-wrapper {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* PESAN PERINGATAN JIKA HP DIPEGANG PORTRAIT/TEGAK */
+@media screen and (orientation: portrait) {
+    #game-wrapper::before {
+        content: "🔄 Harap Putar HP Anda ke Posisi Landscape (Miring)";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #0f172a;
+        color: #ffffff;
+        font-size: 1.2rem;
+        font-weight: bold;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 20px;
+        box-sizing: border-box;
+        z-index: 9999;
+    }
+}

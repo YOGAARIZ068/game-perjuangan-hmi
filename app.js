@@ -1,5 +1,5 @@
 // ==================== CONFIG & SOUND SYNTHESIZER ====================
- 
+const GEMINI_API_KEY = "AQ.Ab8RN6IsyIt5XNiwdm1VEXt09EyOjx-RCrrEVVE-0IJhVgAu4w"; 
 // Variabel penampung status tombol layar sentuh
 let touchState = { left: false, right: false, up: false, down: false };
 
@@ -1141,13 +1141,18 @@ document.addEventListener('DOMContentLoaded', () => {
     bindTouch('btn-right', 'right');
 
     // Tombol Interaksi "E" di Layar HP
+// Tombol Interaksi "E" di Layar HP
     const btnActionE = document.getElementById('btn-action-e');
     if (btnActionE) {
-        btnActionE.addEventListener('click', () => {
+        const triggerE = (e) => {
+            e.preventDefault();
             if (nearbyScreener) {
                 openQuizModal(nearbyScreener.posData);
             }
-        });
+        };
+
+        btnActionE.addEventListener('touchstart', triggerE);
+        btnActionE.addEventListener('click', triggerE);
     }
 
     // STARTS PHASER GAME
