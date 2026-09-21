@@ -1,5 +1,6 @@
 // ==================== CONFIG & SOUND SYNTHESIZER ====================
-const GEMINI_API_KEY = "AQ.Ab8RN6IsyIt5XNiwdm1VEXt09EyOjx-RCrrEVVE-0IJhVgAu4w"; 
+
+
 // Variabel penampung status tombol layar sentuh
 let touchState = { left: false, right: false, up: false, down: false };
 
@@ -122,10 +123,6 @@ const FORUM_QUESTIONS = {
     }
 };
 
-// DATA BATTLE ADU ARGUMENTASI — dipakai khusus di Forum LK 2 sebagai dinamika
-// "bertengkar" sebelum kader mengambil sikap penentu (FORUM_QUESTIONS.lk2).
-// Setiap ronde: satu pihak "menyerang" dengan argumen panas, kader memilih
-// gaya merespons, dan pilihan itu menggerakkan meter ketegangan forum.
 const ARGUMENT_BATTLE_LK2 = {
     rounds: [
         {
@@ -157,7 +154,7 @@ let currentActivePos = null;
 let playerLives = 3;
 let timerInterval = null;
 let timeLeft = 30;
-let hintTimeRemaining = null; // simpan sisa waktu saat modal hint dibuka, agar tidak reset saat kembali
+let hintTimeRemaining = null;
 let phaserGame = null;
 let activeScene = null;
 let nearbyScreener = null;
@@ -168,9 +165,9 @@ let isStoryActive = false;
 let isForumMode = false;
 let currentMapType = 'screening';
 let isGameFinished = false;
-let lastForumData = null; // simpan soal forum yang sedang aktif, dipakai untuk retry saat salah
-let isBattleActive = false; // true saat overlay "adu argumentasi" LK2 sedang tampil
-let isGordonActive = false; // true saat animasi reward Gordon HMI sedang tampil
+let lastForumData = null;
+let isBattleActive = false;
+let isGordonActive = false;
 let battleTension = 50;
 
 // UI & MODAL VARIABLES
@@ -192,8 +189,6 @@ class MainScene extends Phaser.Scene {
         this.load.image('screener3', 'assets/screener_ndp.png');
         this.load.image('temanCustom', 'assets/teman.png');
 
-        // Jika ada asset yang gagal dimuat, jangan biarkan game diam-diam macet -
-        // catat di console supaya mudah didebug saat asset belum tersedia.
         this.load.on('loaderror', (file) => {
             console.warn(`[HMI Game] Gagal memuat asset: ${file.key} (${file.src}). Sprite fallback akan dipakai.`);
         });
@@ -268,9 +263,6 @@ class MainScene extends Phaser.Scene {
     renderEntities() {
         if (this.screenersGroup) this.screenersGroup.destroy(true);
         if (this.npcGroup) this.npcGroup.destroy(true);
-        // BUG FIX: collider lama yang menunjuk ke screenersGroup yang sudah
-        // dihancurkan harus dilepas dulu, kalau tidak Phaser bisa error saat
-        // overlap check mengenai game object yang sudah destroyed.
         if (this.screenerOverlapCollider) {
             this.screenerOverlapCollider.destroy();
             this.screenerOverlapCollider = null;
@@ -355,86 +347,83 @@ class MainScene extends Phaser.Scene {
     }
 
     update() {
-    if (!this.player) return;
+        if (!this.player) return;
 
-            this.player.setVelocity(0);
+        this.player.setVelocity(0);
 
-            if (isStoryActive && Phaser.Input.Keyboard.JustDown(this.keyEnter)) {
-                advanceStory();
-                return;
-            }
-
-            // Fallback: kalau modal kuis terbuka dan pemain menekan ESC, tutup kuis
-            // (dulu tidak ada cara keluar kuis selain klik tombol X dengan mouse).
-            const isQuizOpenForEsc = quizModal && !quizModal.classList.contains('hidden');
-            if (isQuizOpenForEsc && Phaser.Input.Keyboard.JustDown(this.keyEsc)) {
-                closeQuizModal();
-                return;
-            }
-
-            if (nearbyScreener && (Phaser.Input.Keyboard.JustDown(this.keyE))) {
-                openQuizModal(nearbyScreener.posData);
-            }
-
-            nearbyScreener = null;
-            const promptEl = document.getElementById('interaction-prompt');
-            if (promptEl) promptEl.classList.add('hidden');
-
-            // PENGECEKAN SAFE DENGAN CEK ADA/TIDAKNYA ELEMEN DULU
-            const isQuizOpen = quizModal && !quizModal.classList.contains('hidden');
-            const isLafranOpen = lafranModal && !lafranModal.classList.contains('hidden');
-            const isStatusOpen = statusModal && !statusModal.classList.contains('hidden');
-
-            if (isStoryActive || isQuizOpen || isLafranOpen || isStatusOpen || isBattleActive || isGordonActive) {
-                this.player.setScale(0.45, 0.45);
-                return;
-            }
-
-            let isMoving = false;
-            const speed = 300;
-
-            // DITAMBAHKAN CEK DARI TOUCHSTATE TANPA MENGUBAH STRUKTUR
-            if (this.cursors.left.isDown || touchState.left) {
-                this.player.setVelocityX(-speed);
-                this.player.setFlipX(true);
-                isMoving = true;
-            } else if (this.cursors.right.isDown || touchState.right) {
-                this.player.setVelocityX(speed);
-                this.player.setFlipX(false);
-                isMoving = true;
-            }
-
-            if (this.cursors.up.isDown || touchState.up) {
-                this.player.setVelocityY(-speed);
-                isMoving = true;
-            } else if (this.cursors.down.isDown || touchState.down) {
-                this.player.setVelocityY(speed);
-                isMoving = true;
-            }
-
-            if (isMoving) {
-                let bounce = Math.sin(this.time.now * 0.018) * 0.02;
-                this.player.setScale(0.45, 0.45 + bounce);
-                if (Math.random() < 0.08) playSFX('type');
-            } else {
-                this.player.setScale(0.45, 0.45);
-            }
+        if (isStoryActive && Phaser.Input.Keyboard.JustDown(this.keyEnter)) {
+            advanceStory();
+            return;
         }
 
-        handleOverlap(player, screener) {
-            nearbyScreener = screener;
-            if (!isStoryActive && currentMapType === 'screening') {
-                const promptEl = document.getElementById('interaction-prompt');
-                if (promptEl) promptEl.classList.remove('hidden');
-            }
+        const isQuizOpenForEsc = quizModal && !quizModal.classList.contains('hidden');
+        if (isQuizOpenForEsc && Phaser.Input.Keyboard.JustDown(this.keyEsc)) {
+            closeQuizModal();
+            return;
+        }
+
+        if (nearbyScreener && (Phaser.Input.Keyboard.JustDown(this.keyE))) {
+            openQuizModal(nearbyScreener.posData);
+        }
+
+        nearbyScreener = null;
+        const promptEl = document.getElementById('interaction-prompt');
+        if (promptEl) promptEl.classList.add('hidden');
+
+        const isQuizOpen = quizModal && !quizModal.classList.contains('hidden');
+        const isLafranOpen = lafranModal && !lafranModal.classList.contains('hidden');
+        const isStatusOpen = statusModal && !statusModal.classList.contains('hidden');
+
+        if (isStoryActive || isQuizOpen || isLafranOpen || isStatusOpen || isBattleActive || isGordonActive) {
+            this.player.setScale(0.45, 0.45);
+            return;
+        }
+
+        let isMoving = false;
+        const speed = 300;
+
+        if (this.cursors.left.isDown || touchState.left) {
+            this.player.setVelocityX(-speed);
+            this.player.setFlipX(true);
+            isMoving = true;
+        } else if (this.cursors.right.isDown || touchState.right) {
+            this.player.setVelocityX(speed);
+            this.player.setFlipX(false);
+            isMoving = true;
+        }
+
+        if (this.cursors.up.isDown || touchState.up) {
+            this.player.setVelocityY(-speed);
+            isMoving = true;
+        } else if (this.cursors.down.isDown || touchState.down) {
+            this.player.setVelocityY(speed);
+            isMoving = true;
+        }
+
+        if (isMoving) {
+            let bounce = Math.sin(this.time.now * 0.018) * 0.02;
+            this.player.setScale(0.45, 0.45 + bounce);
+            if (Math.random() < 0.08) playSFX('type');
+        } else {
+            this.player.setScale(0.45, 0.45);
         }
     }
 
+    handleOverlap(player, screener) {
+        nearbyScreener = screener;
+        if (!isStoryActive && currentMapType === 'screening') {
+            const promptEl = document.getElementById('interaction-prompt');
+            if (promptEl) promptEl.classList.remove('hidden');
+        }
+    }
+}
+
+// FIX: PERBAIKAN NAMA PARENT CONTEXT MENJADI 'game-wrapper'
 const config = {
     type: Phaser.AUTO,
     width: 1920,
     height: 1080,
-    parent: 'game-container',
+    parent: 'game-wrapper',
     pixelArt: true,
     scale: {
         mode: Phaser.Scale.FIT,
@@ -462,8 +451,6 @@ function displayCurrentDialogue() {
         if (item.portrait) {
             portraitImg.src = item.portrait;
             portraitImg.style.display = 'block';
-            // BUG FIX: kalau file gambar portrait tidak ada, jangan biarkan
-            // ikon "broken image" jelek muncul di tengah dialog - sembunyikan saja.
             portraitImg.onerror = () => { portraitImg.style.display = 'none'; };
         } else {
             portraitImg.style.display = 'none';
@@ -475,9 +462,6 @@ function displayCurrentDialogue() {
 
 function advanceStory() {
     playSFX('click');
-    // Kalau teks masih sedang mengetik, klik/enter pertama akan langsung
-    // menyelesaikan teks (skip animasi) dulu, baru klik berikutnya lanjut.
-    // Ini pola UX standar visual novel yang tadinya tidak ada di sini.
     if (dialogueText && dialogueText.typewriterTimer) {
         clearInterval(dialogueText.typewriterTimer);
         dialogueText.typewriterTimer = null;
@@ -580,7 +564,7 @@ function openForumModal(forumData) {
     if (phaserGame && phaserGame.input && phaserGame.input.keyboard) phaserGame.input.keyboard.enabled = false;
 
     isForumMode = true;
-    lastForumData = forumData; // dipakai handleWrongAnswer() untuk membuka ulang forum kalau salah
+    lastForumData = forumData;
     if (posBadge) posBadge.innerText = "AULA FORUM UTAMA";
     if (screenerTitle) screenerTitle.innerText = forumData.title;
     if (optionsContainer) optionsContainer.innerHTML = '';
@@ -668,9 +652,6 @@ function startForumPhase() {
             openForumModal(FORUM_QUESTIONS.lk1);
         });
     } else {
-        // BARU: sebelum pertanyaan penentu LK2, kader melewati dinamika
-        // "adu argumentasi" dulu (dua pihak bertengkar), baru setelah itu
-        // forum modal keputusan akhir (FORUM_QUESTIONS.lk2) dibuka.
         startStorySequence(STORY_DIALOGUES.forum_lk2, () => {
             startArgumentBattle(() => {
                 openForumModal(FORUM_QUESTIONS.lk2);
@@ -678,10 +659,6 @@ function startForumPhase() {
         });
     }
 }
-
-// ================= SISTEM ADU ARGUMENTASI (BATTLE) LK2 =================
-// Dibuat murni lewat JS (overlay + style disuntik dinamis) supaya tetap
-// berfungsi walau HTML halamanmu belum punya elemen khusus untuk ini.
 
 function injectBattleStyles() {
     if (document.getElementById('hmi-battle-styles')) return;
@@ -783,7 +760,7 @@ function runBattleRound(idx, onComplete) {
     const optionsEl = document.getElementById('hmi-battle-options');
 
     overlay.classList.add('hmi-shake');
-    playSFX('wrong'); // dipinjam sebagai "sfx serangan argumen" bernada tegang
+    playSFX('wrong');
     setTimeout(() => overlay.classList.remove('hmi-shake'), 350);
 
     if (attackTextEl) attackTextEl.textContent = `${round.attacker}: "${round.attackText}"`;
@@ -830,11 +807,6 @@ function handleWrongAnswer(reason) {
         return;
     }
 
-    // BUG FIX UTAMA: pos screening biasa punya screener yang bisa didekati lagi
-    // untuk retry, tapi forum tidak punya NPC apa pun untuk itu - jadi dulu
-    // begitu jawaban forum salah, kader benar-benar macet, tidak bisa lanjut
-    // sama sekali. Sekarang forum otomatis dibuka lagi setelah jeda singkat
-    // supaya kader langsung bisa mencoba jawaban lain (selama nyawa masih ada).
     if (isForumMode && lastForumData) {
         showToast(`❌ ${reason} Forum masih menunggu argumenmu... (Nyawa: ${playerLives})`);
         setTimeout(() => {
@@ -845,8 +817,6 @@ function handleWrongAnswer(reason) {
     }
 }
 
-// Toast kecil untuk feedback jawaban salah, dibuat murni lewat JS supaya tidak
-// bergantung pada elemen HTML tertentu yang mungkin belum ada di halamanmu.
 function showToast(message, duration = 1800) {
     let toast = document.getElementById('hmi-toast');
     if (!toast) {
@@ -877,12 +847,6 @@ function showGameOverModal() {
     if (btnAction) btnAction.innerText = "Ulangi Level";
     if (statusModal) statusModal.classList.remove('hidden');
 }
-
-// ================= REWARD: ANIMASI GORDON HMI =================
-// Muncul sekali di akhir cerita, setelah kader lulus LK1 & LK2, sebagai
-// hadiah simbolis "Gordon" (selempang kelulusan) khas organisasi. Dibuat
-// murni via CSS/JS (bukan file gambar) supaya tetap tampil keren walau
-// kamu belum menaruh asset gordon.png di folder assets/.
 
 function injectGordonStyles() {
     if (document.getElementById('hmi-gordon-styles')) return;
@@ -947,7 +911,6 @@ function buildGordonOverlay() {
     overlay = document.createElement('div');
     overlay.id = 'hmi-gordon-overlay';
 
-    // Beberapa partikel kilau ditempatkan acak di sekitar medali.
     let sparklesHtml = '';
     const sparklePositions = [
         { top: '18%', left: '30%', delay: '0s' },
@@ -1000,8 +963,6 @@ function showGordonReward(onComplete) {
     }
 }
 
-// BARU: layar kemenangan setelah dialog ending dan reward Gordon selesai.
-// Sebelumnya game "menggantung" begitu saja tanpa cara main lagi setelah tamat.
 function showVictoryModal() {
     isGameFinished = true;
     const statusTitle = document.getElementById('status-title');
@@ -1038,9 +999,6 @@ async function getLafranAIHint(question) {
         }
 
         const data = await response.json();
-        // BUG FIX: akses langsung data.candidates[0]... akan melempar error
-        // dan mematikan seluruh fitur hint jika API mengembalikan format
-        // tak terduga (misalnya diblokir safety filter / kuota habis).
         const hint = data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!hint) throw new Error("Format respons AI tidak sesuai dugaan");
         return hint;
@@ -1082,10 +1040,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnLafran = document.getElementById('btn-lafran');
     if (btnLafran) {
         btnLafran.addEventListener('click', async () => {
-            // BUG FIX: dulu timer di-clear tapi sisa waktunya tidak disimpan,
-            // lalu saat modal hint ditutup timer selalu di-reset ke 30 detik.
-            // Ini eksploitasi mudah (spam tombol hint = waktu tak terbatas).
-            // Sekarang sisa waktu disimpan dan dilanjutkan, bukan direset.
             hintTimeRemaining = timeLeft;
             clearInterval(timerInterval);
             if (quizModal) quizModal.classList.add('hidden');
@@ -1103,7 +1057,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCloseLafran.addEventListener('click', () => {
             if (lafranModal) lafranModal.classList.add('hidden');
             if (quizModal) quizModal.classList.remove('hidden');
-            // Lanjutkan sisa waktu, jangan reset ke 30 (lihat catatan BUG FIX di atas).
             startTimer(hintTimeRemaining ?? 30);
         });
     }
@@ -1122,14 +1075,13 @@ document.addEventListener('DOMContentLoaded', () => {
             window.focus();
         });
     }
+
     // Listener Tombol Layar Sentuh HP
     const bindTouch = (id, dir) => {
         const btn = document.getElementById(id);
         if (btn) {
-            // Untuk Layar Sentuh HP
             btn.addEventListener('touchstart', (e) => { e.preventDefault(); touchState[dir] = true; });
             btn.addEventListener('touchend', (e) => { e.preventDefault(); touchState[dir] = false; });
-            // Untuk Klik Mouse di PC (opsional/pengujian)
             btn.addEventListener('mousedown', () => { touchState[dir] = true; });
             btn.addEventListener('mouseup', () => { touchState[dir] = false; });
         }
@@ -1141,7 +1093,6 @@ document.addEventListener('DOMContentLoaded', () => {
     bindTouch('btn-right', 'right');
 
     // Tombol Interaksi "E" di Layar HP
-// Tombol Interaksi "E" di Layar HP
     const btnActionE = document.getElementById('btn-action-e');
     if (btnActionE) {
         const triggerE = (e) => {
